@@ -21,7 +21,7 @@ node('master') {
 	}
 	
 	stage ('Deployment'){
-		//sh 'cp target/*.war  /root/apache-tomcat-8.5.50/webapps'
+		sh 'cp target/*.war  /root/apache-tomcat-8.5.50/webapps'
 	}
 	stage ('Notification'){
 		//slackSend color: 'good', message: 'Deployment Sucessful'
