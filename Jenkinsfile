@@ -23,7 +23,7 @@ node('master') {
 	stage ('Deployment') {
 		
 		withCredentials([usernameColonPassword(credentialsId: 'MYID123', variable: 'new')]) {
-			sh ' tomcat login -u tomcat -p ${new}'
+			sh ' login -u tomcat -p ${new}'
 			
 			sh 'cp target/*.war  root/apache-tomcat-8.5.50/webapps'
 			
