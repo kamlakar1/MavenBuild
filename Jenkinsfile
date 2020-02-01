@@ -21,11 +21,11 @@ node('master') {
 	}
 	
 	stage ('Deployment') {
-             withCredentials([usernamePassword(credentialsId: 'this-is-tomo', passwordVariable: 'passwd', usernameVariable: 'user')]) {
-		     sh " tomcat login -u ${user} -p ${passwd}"
-		     sh 'cp target/*.war  root/apache-tomcat-8.5.50/webapps'
+		
+                 
+	sh 'cp target/*.war  root/apache-tomcat-8.5.50/webapps'
 		     
-	     }
+	     
 }
 
 		
