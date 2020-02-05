@@ -1,0 +1,150 @@
+node {
+
+    def mvnHome = tool 'Maven3'
+    stage ("checkout")  {
+       // copy code here which you generated from step #6
+    }
+
+   stage ('build')  {
+    sh "${mvnHome}/bin/mvn clean install -f MyWebApp/pom.xml"
+    }
+
+     stage ('Code Quality scan')  {
+       withSonarQubeEnv('SonarQube') {
+       sh "${mvnHome}/bin/mvn -f MyWebApp/pom.xml sonar:sonar"
+        }
+   }
+  
+   stage ('Code coverage')  {
+       jacoco()
+   }
+
+   stage ('Nexus upload')  {
+        nexusArtifactUploader(
+        nexusVersion: 'nexus3',
+        protocol: 'http',
+        nexusUrl: 'nexus_url:8081',
+        groupId: 'myGroupId',
+        version: '1.0-SNAPSHOT',
+        repository: 'maven-snapshots',
+        credentialsId: '2c293828-9509-49b4-a6e7-77f3ceae7b39',
+        artifacts: [
+            [artifactId: 'MyWebApp',
+             classifier: '',
+             file: 'MyWebApp/target/MyWebApp.war',
+             type: 'war']
+        ]
+     )
+    }
+
+   
+   stage ('DEV Deploy')  {
+      echo "deploying to DEV Env "
+      deploy adapters: [tomcat8(credentialsId: '4c55fae1-a02d-4b82-ba34-d262176eeb46', path: '', url: 'http://localhost:8090')], contextPath: null, war: '**/*.war'
+
+    }
+
+   stage ('DEV Approve')  {
+            echo "Taking approval from DEV Manager"     
+            timeout(time: 7, unit: 'DAYS') {
+            input message: 'Do you want to deploy?', submitter: 'admin'
+            }
+     }
+
+  stage ('Slack notification')  {
+    slackSend(channel:'channel-name', message: "Job is successful, here is the info -  Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+   }
+
+
+stage ('QA Deploy')  {
+     echo "deploying to QA Env " 
+deploy adapters: [tomcat8(credentialsId: '4c55fae1-a02d-4b82-ba34-d262176eeb46', path: '', url: 'http://localhost:8090')], contextPath: null, war: '**/*.war'
+
+}
+
+stage ('QA Approve')  {
+    echo "Taking approval from QA manager"
+
+    timeout(time: 7, unit: 'DAYS') {
+        input message: 'Do you want to proceed to PROD?', submitter: 'admin,manager_userid'
+  }
+}
+}
+
+
+================================================
+
+node {
+  stage('Getting ready...') {
+    git branch: "dev", credentialsId: 'your_id_on_jenkins', url: 'https://github.com/amenski/jenkins_pipeline.git'
+  }
+
+
+Building stage:
+
+stage('Build'){
+  script{
+    try {
+      if(isUnix()){
+          sh 'mvn clean package'
+      }else{
+       bat 'mvn clean package'
+      }
+    } catch(err) {
+    throw err
+    }
+   }
+}
+Let's assume that till this point everything has gone right.
+
+stage('SSH transfer') {
+ script {
+  sshPublisher(
+   continueOnError: false, failOnError: true,
+   publishers: [
+    sshPublisherDesc(
+     configName: "${env.SSH_CONFIG_NAME}",
+     verbose: true,
+     transfers: [
+      sshTransfer(
+       sourceFiles: "${path_to_file}/${file_name}, ${path_to_file}/${file_name}",
+       removePrefix: "${path_to_file}",
+       remoteDirectory: "${remote_dir_path}",
+       execCommand: "run commands after copy?"
+      )
+     ])
+   ])
+ }
+}
+
+
+
+
+=============================================
+
+
+
+transfers:[
+  sshTransfer(
+    execCommand: "Run commands before copy?"
+   ),
+  sshTransfer(
+    sourceFiles:"${path_to_file}/${file_name}, ${path_to_file}/${file_name}",
+    removePrefix: "${path_to_file}",
+    remoteDirectory: "${remote_dir_path}",
+    execCommand: "run commands after copy?"
+  )
+])
+
+
+Deploy:
+
+stage('Deploy'){
+  if(currentBuild.currentResult == "SUCCESS" || currentBuild.currentResult == "UNSTABLE"){
+    if (isUnix()) {
+      sh 'echo "Build Succeded."'
+      }else{
+        bat 'echo "Build Succeded."'
+      }
+     }
+    }
